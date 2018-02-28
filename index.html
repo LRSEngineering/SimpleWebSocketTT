@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>WebSocket Test</title>
+	<link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
+</head>
+<body>
+
+	<div style="width: 50%; margin: 0 auto;">
+		<h1>WebSocket Test to Gateway WebSocket</h1>
+
+		<form id="ipInputForm" class="pure-form" style="padding: 10px 0;">
+			<input type="text" placeholder="Gateway IP" id="ipInput" />
+			<input type="submit" id="ipInputSubmit" class="pure-button pure-button-primary" />
+		</form>
+
+		<table id="activeorders" class="pure-table">
+			<thead>
+				<tr>
+					<th>Order Name</th>
+					<th>Order UUID</th>
+					<th>Order Type</th>
+					<th>Order State</th>
+					<th>Order Created</th>
+					<th>Paged</th>
+				</tr>
+			</thead>
+			<tbody>
+			</tbody>
+		</table>
+	</div>
+
+	<script type="text/javascript">
+		var orderTable = document.getElementById("activeorders")
+				.getElementsByTagName('tbody')[0],
+			inputForm = document.getElementById("ipInputForm");
+
+		function setOrderRow(row, order) {
+			var nameCell = row.insertCell(0),
+				uuidCell = row.insertCell(1),
+				typeCell = row.insertCell(2),
+				stateCell = row.insertCell(3),
+				createdCell = row.insertCell(4),
+				pagedCell = row.insertCell(5);
+
+			row.setAttribute("id", "order-" + order.name);
+			nameCell.innerHTML = order.name;
+			uuidCell.innerHTML = order.uuid;
+			typeCell.innerHTML = order.orderType;
+			stateCell.innerHTML = order.state;
+			createdCell.innerHTML = order.created;
+			pagedCell.innerHTML = order.paged ? "True" : "False";
+		}
+
+		function addOrder(order) {
+			// Check if order already exists
+			var orderRow = document.getElementById("order-" + order.name);
+
+			if (orderRow === null) {
+				// Append order
+				orderRow = orderTable.insertRow(0),
+				setOrderRow(orderRow, order);
+			} else {
+				// Update order
+				orderRow.innerHTML = '';
+				setOrderRow(orderRow, order);
+			}
+		}
+
+		ipInputForm.onsubmit = function(ev) {
+			ev.preventDefault();
+
+			// Get IP Address
+			var gatewayIp = document.getElementById("ipInput").value,
+				ws = new WebSocket("ws://" + gatewayIp + ":8000/api/v2/websocket");
+
+			ws.onopen = function(ev) {
+				// Replace accesstoken value here.
+				ws.send(JSON.stringify({
+					"accesstoken":	"729313f65f42d9f9aad9b86a7479e96e897abdce80bad08c"
+				}));
+			}
+
+			ws.onmessage = function(ev) {
+				var data = JSON.parse(ev.data);
+
+				if (data.type === "ACTIVE_ORDERS") {
+					// Populate orders
+					data.items.forEach(function (order) {
+						addOrder(order);
+					});
+				} else {
+					addOrder(data);
+				}
+			}
+		}
+	</script>
+</body>
+</html>
